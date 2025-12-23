@@ -28,11 +28,18 @@ PX4_GZ_MODEL=x500_depth /home/ubuntu/px4_sitl/bin/px4 -w /home/ubuntu/px4_sitl/r
 # ----------------------------
 # Pane 2: Gazebo → ROS 2 Bridge for Image transport
 # ----------------------------
-gz_ros_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
-tmux send-keys -t $gz_ros_pane "ros2 run ros_gz_bridge parameter_bridge /world/default/model/x500_depth_0/link/camera_link/sensor/IMX214/image@sensor_msgs/msg/Image[gz.msgs.Image /world/default/model/x500_depth_0/link/camera_link/sensor/IMX214/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo" C-m
+gz_ros_image_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
+tmux send-keys -t $gz_ros_image_pane "ros2 run ros_gz_bridge parameter_bridge /world/default/model/x500_depth_0/link/camera_link/sensor/IMX214/image@sensor_msgs/msg/Image[gz.msgs.Image /world/default/model/x500_depth_0/link/camera_link/sensor/IMX214/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo" C-m
 
 # ----------------------------
-# Pane 3: Micro XRCE-DDS Agent
+# Pane 3: Gazebo → ROS 2 Bridge for Depth transport
+# ----------------------------
+gz_ros_depth_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
+tmux send-keys -t $gz_ros_depth_pane "ros2 run ros_gz_bridge parameter_bridge /depth_camera@sensor_msgs/msg/Image[gz.msgs.Image" C-m
+
+
+# ----------------------------
+# Pane 4: Micro XRCE-DDS Agent
 # ----------------------------
 
 dds_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
