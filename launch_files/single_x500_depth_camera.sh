@@ -16,19 +16,13 @@ tmux new-session -d -s $SESSION_NAME
 # ----------------------------
 # Pane 0: Gazebo Simulation
 # ----------------------------
-tmux send-keys -t $SESSION_NAME:0.0 \
-"exec python3 /home/ubuntu/PX4-gazebo-models/simulation-gazebo \
-  --model_store /home/ubuntu/PX4-gazebo-models \
-  --world $GZ_WORLD" C-m
+tmux send-keys -t $SESSION_NAME:0.0 "exec python3 /home/ubuntu/PX4-gazebo-models/simulation-gazebo --model_store /home/ubuntu/PX4-gazebo-models --world $GZ_WORLD" C-m
 
 # ----------------------------
 # Pane 1: PX4 SITL
 # ----------------------------
 tmux split-window -h -t $SESSION_NAME:0.0
-tmux send-keys -t $SESSION_NAME:0.1 \
-"PX4_GZ_STANDALONE=1 \
-PX4_SYS_AUTOSTART=$PX4_SYS_AUTOSTART \
-PX4_PARAM_UXRCE_DDS_SYNCT=0 \
+tmux send-keys -t $SESSION_NAME:0.1 "PX4_GZ_STANDALONE=1 PX4_SYS_AUTOSTART=$PX4_SYS_AUTOSTART PX4_PARAM_UXRCE_DDS_SYNCT=0 \
 PX4_GZ_MODEL=x500_depth exec /home/ubuntu/px4_sitl/bin/px4 -w /home/ubuntu/px4_sitl/romfs" C-m
 
 # ----------------------------
@@ -43,23 +37,23 @@ tmux send-keys -t $SESSION_NAME:0.2 \
 # ----------------------------
 # Pane 3: Micro XRCE-DDS Agent
 # ----------------------------
-tmux split-window -v -t $SESSION_NAME:0.0
-tmux send-keys -t $SESSION_NAME:0.3 \
-"exec MicroXRCEAgent udp4 -p $UXRCE_DDS_PORT" C-m
+tmux split-window -h -t $SESSION_NAME:0.1
+tmux send-keys -t $SESSION_NAME:0.3 "
+echo 'Waiting for PX4 SITL process to start...'
+while ! ps aux | grep -E '[p]x4_sitl' >/dev/null; do
+    sleep 1
+done
+echo 'PX4 SITL detected. Starting Micro XRCE-DDS Agent...'
+MicroXRCEAgent udp4 -p $PX4_UXRCE_DDS_PORT" C-m
 
 # ----------------------------
-# Pane 4: Inspect PX4 topics
+# Equalize all panes in the first window
 # ----------------------------
-tmux split-window -v -t $SESSION_NAME:0.0
-tmux send-keys -t $SESSION_NAME:0.4 \
-"exec ros2 topic echo /fmu/out/vehicle_status_v1" C-m
+tmux select-layout -t $SESSION_NAME:0 tiled
 
-# ----------------------------
-# Extra window: ROS 2 tools
-# ----------------------------
+# ROS2 tools window
 tmux new-window -t $SESSION_NAME -n "ros2_tools"
-tmux send-keys -t $SESSION_NAME:1 \
-"exec ros2 topic list" C-m
+tmux send-keys -t $SESSION_NAME:1 " sleep 10; ros2 topic list " C-m
 
 # Focus and attach
 tmux select-window -t $SESSION_NAME:0
