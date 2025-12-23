@@ -52,7 +52,7 @@ tmux select-layout -t $SESSION_NAME:0 tiled
 
 # ROS2 tools window
 tmux new-window -t $SESSION_NAME -n "ros2_tools"
-tmux send-keys -t $SESSION_NAME:1 " bash -c ' sleep 10; ros2 topic list ' " C-m
+tmux send-keys -t $SESSION_NAME:1 " bash -c ' sleep 8; ros2 run rqt_image_view rqt_image_view ' " C-m
 
 # Focus and attach
 tmux select-window -t $SESSION_NAME:0
