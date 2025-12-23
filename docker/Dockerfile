@@ -4,6 +4,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-o", "errexit", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 
+# Install dependencies
+RUN --mount=type=bind,source=./docker/scripts/install_deps.sh,target=/root/scripts/install_deps.sh \
+    bash /root/scripts/install_deps.sh
+
 # Add user
 ENV USER=ubuntu
 RUN groupadd -g 1000 ${USER} && \
@@ -12,7 +16,7 @@ RUN groupadd -g 1000 ${USER} && \
     apt-get install -y sudo && \
     echo "${USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER} && \
     chmod 0440 /etc/sudoers.d/${USER}
-	
+
 # Install tools and tmuxinator
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -38,11 +42,6 @@ COPY resources/ros_packages/. /home/${USER}/ros2_ws/src
 WORKDIR /home/${USER}/ros2_ws
 RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-install"
 
-# Install dependencies
-RUN --mount=type=bind,source=./docker/scripts/install_deps.sh,target=/root/scripts/install_deps.sh \
-    bash /root/scripts/install_deps.sh
-
-
 # BUILD OPENCV    
 FROM base AS build-opencv
 
@@ -59,6 +58,7 @@ RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/opencv.conf && ldconfig
 
 # BUILD ROS 2 DEPENDENCIES
 FROM pre-dev AS dep-ros2
+
 ARG MICRO_XRCE_DDS_AGENT_VERSION=v2.4.2
 ARG PX4_MSGS_VERSION=release/1.16
 ARG PX4_ROS2_INTERFACE_LIB_VERSION=release/1.16
@@ -73,6 +73,7 @@ RUN --mount=type=bind,source=./docker/scripts/build_ros_deps.sh,target=/root/scr
 
 # BUILD PX4
 FROM pre-dev AS build-px4
+
 ARG PX4_VERSION=v1.16.0
 RUN --mount=type=bind,source=./docker/scripts/build_px4.sh,target=/home/${USER}/scripts/build_px4.sh \
     bash /home/${USER}/scripts/build_px4.sh ${PX4_VERSION}
@@ -93,10 +94,10 @@ COPY --from=build-px4 --chown=${USER}:${USER} /home/${USER}/PX4-Autopilot/Tools/
 WORKDIR /home/${USER}/
 COPY --from=build-px4 --chown=${USER}:${USER} /home/${USER}/px4_sitl /home/${USER}/px4_sitl
 RUN echo "source /home/$USER/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc && \
-    echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> /home/$USER/.bashrc
+    echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> /home/$USER/.bashrc  && \
+    echo "source /home/${USER}/px4_ros_ws/install/setup.bash" >> /home/$USER/.bashrc
     
 # Entrypoint
 COPY --chmod=755 docker/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/bin/bash"]
-
