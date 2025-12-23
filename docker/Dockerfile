@@ -91,6 +91,10 @@ WORKDIR /home/${USER}
 # retrieve PX4-gazebo-models
 COPY --from=build-px4 --chown=${USER}:${USER} /home/${USER}/PX4-Autopilot/Tools/simulation/gz /home/${USER}/PX4-gazebo-models
 
+# copying custom world and models from local
+COPY --chown=${USER}:${USER} ./resources/gz_models/. /home/${USER}/PX4-gazebo-models/models
+COPY --chown=${USER}:${USER} ./resources/gz_worlds/. /home/${USER}/PX4-gazebo-models/worlds
+
 WORKDIR /home/${USER}/
 COPY --from=build-px4 --chown=${USER}:${USER} /home/${USER}/px4_sitl /home/${USER}/px4_sitl
 RUN echo "source /home/$USER/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc && \
