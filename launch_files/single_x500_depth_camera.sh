@@ -4,7 +4,8 @@ SESSION_NAME="tmuxinator_session"
 
 # CONFIGURATION (CHANGE MODEL HERE)
 PX4_SYS_AUTOSTART=4002
-GZ_WORLD="default"
+PX4_GZ_MODEL=x500_depth
+GZ_WORLD="custom"
 PX4_UXRCE_DDS_PORT=8888
 
 # Kill existing session if it exists
@@ -23,7 +24,7 @@ tmux send-keys -t $SESSION_NAME:0.0 " bash -c ' python3 /home/ubuntu/PX4-gazebo-
 # ----------------------------
 tmux split-window -h -t $SESSION_NAME:0.0
 tmux send-keys -t $SESSION_NAME:0.1 "bash -c ' PX4_GZ_STANDALONE=1 PX4_SYS_AUTOSTART=$PX4_SYS_AUTOSTART PX4_PARAM_UXRCE_DDS_SYNCT=0 \
-PX4_GZ_MODEL=x500_depth /home/ubuntu/px4_sitl/bin/px4 -w /home/ubuntu/px4_sitl/romfs ' " C-m
+PX4_GZ_MODEL=$PX4_GZ_MODEL /home/ubuntu/px4_sitl/bin/px4 -w /home/ubuntu/px4_sitl/romfs ' " C-m
 
 # ----------------------------
 # Pane 2: Gazebo → ROS 2 Bridge for Image transport
