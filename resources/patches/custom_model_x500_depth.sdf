@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version='1.9'>
+  <model name='x500_depth'>
+
+    <!-- Base drone model -->
+    <include merge='true'>
+      <uri>x500</uri>
+    </include>
+
+    <!-- Oak-D Lite camera mounted 45° downward -->
+    <include merge='true'>
+      <uri>model://OakD-Lite</uri>
+      <pose>0.12 0.03 0.242 0 0.7854 0</pose>
+    </include>
+
+    <!-- Fixed joint attaching camera to drone -->
+    <joint name="CameraJoint" type="fixed">
+      <parent>base_link</parent>
+      <child>camera_link</child>
+      <pose relative_to="base_link">0.12 0.03 0.242 0 0.7854 0</pose>
+    </joint>
+
+  </model>
+</sdf>
+

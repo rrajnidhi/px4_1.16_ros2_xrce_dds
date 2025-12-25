@@ -95,6 +95,15 @@ COPY --from=build-px4 --chown=${USER}:${USER} /home/${USER}/PX4-Autopilot/Tools/
 COPY --chown=${USER}:${USER} ./resources/gz_models/. /home/${USER}/PX4-gazebo-models/models
 COPY --chown=${USER}:${USER} ./resources/gz_worlds/. /home/${USER}/PX4-gazebo-models/worlds
 
+# Copy the custom SDF into a temporary location
+COPY --chown=${USER}:${USER} ./resources/patches/custom_model_x500_depth.sdf /tmp/custom_model_x500_depth.sdf
+
+# Clear the existing file and replace it with the custom one
+RUN chown ${USER}:${USER} /home/${USER}/PX4-gazebo-models/models/x500_depth/model.sdf
+RUN rm -f /home/${USER}/PX4-gazebo-models/models/x500_depth/model.sdf && \
+    cp /tmp/custom_model_x500_depth.sdf /home/${USER}/PX4-gazebo-models/models/x500_depth/model.sdf && \
+    rm /tmp/custom_model_x500_depth.sdf
+
 WORKDIR /home/${USER}/
 COPY --from=build-px4 --chown=${USER}:${USER} /home/${USER}/px4_sitl /home/${USER}/px4_sitl
 RUN echo "source /home/$USER/ros2_ws/install/setup.bash" >> /home/$USER/.bashrc && \
