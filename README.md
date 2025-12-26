@@ -6,8 +6,8 @@ Environment for running UAV simulations with **PX4 1.16.0**, **ROS2**, **Gazebo*
 ## Features
 
 - Fully containerized PX4 SITL environment for Ubuntu 22.04
-- RGB and Depth sensor enabled
-- Camera drone with object detection
+- RGB and Depth sensor enabled for multirotor
+- X500 with YOLO v8 object detection
 
 
 ## Directory Structure
@@ -25,6 +25,9 @@ PX4_1.16_ROS2_XRCE_DDS/
     └── single_x500_depth_camera.sh
     └── single_vtol_camera.sh
 └── resources/
+    └── gz_models/
+    └── gz_worlds/
+    └── patches/
     └── ros_packages/
         └── camera_subscriber/
             └── ..
@@ -57,13 +60,13 @@ To start and enter the docker container
 
 ## Launch simulation
 
-Once inside to launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS:
+Once inside to launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with YOLO v8 object detection in custom world :
 
 ```bash
 cd /launch_files
-./single_x500_depth_camera.sh
+./single_x500_object_detection.sh
 ```
-
+Caution: This currently runs the detection node in CPU not in GPU. This can saturate the processor.
 ---
 
 ### List PX4 topics
