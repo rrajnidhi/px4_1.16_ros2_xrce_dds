@@ -47,6 +47,13 @@ dds_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
 tmux send-keys -t $dds_pane "sleep 5; MicroXRCEAgent udp4 -p $PX4_UXRCE_DDS_PORT" C-m
 
 # ----------------------------
+# Pane 5: Object detection
+# ----------------------------
+
+detection_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
+tmux send-keys -t $detection_pane "sleep 8; ros2 run camera_subscriber camera_subscriber_node " C-m
+
+# ----------------------------
 # Equalize all panes in the first window
 # ----------------------------
 tmux select-layout -t $SESSION_NAME:0 tiled

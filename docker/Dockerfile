@@ -32,7 +32,38 @@ RUN gem install tmuxinator
 RUN apt-get update && apt-get install -y \
     ros-humble-rviz2 \
     ros-humble-rqt-image-view \
+    ros-humble-cv-bridge \
     && rm -rf /var/lib/apt/lists/*
+
+# Install pip
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Force NumPy 1.x for ROS compatibility
+RUN python3 -m pip install --no-cache-dir "numpy<2"
+
+# Install YOLOv8 (Ultralytics)
+# Install pip
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Force NumPy 1.x (ROS / cv_bridge compatibility)
+RUN python3 -m pip install --no-cache-dir "numpy<2"
+
+# Install PyTorch compatible with numpy<2
+RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# Install YOLOv8 WITHOUT upgrading NumPy
+RUN python3 -m pip install --no-cache-dir --no-deps ultralytics
+
+# Create YOLO cache directory and download weights
+USER ubuntu
+RUN mkdir -p /home/ubuntu/.cache/ultralytics && \
+    wget -O /home/ubuntu/.cache/ultralytics/yolov8m.pt \
+    https://github.com/ultralytics/assets/releases/download/v8.3.0/yolov8m.pt
+
 
 COPY launch_files/. /home/${USER}/launch_files
 
@@ -46,13 +77,14 @@ RUN /bin/bash -c "source /opt/ros/humble/setup.bash && colcon build --symlink-in
 FROM base AS build-opencv
 
 ARG OPENCV_VERSION=4.10.0
+USER root
 RUN --mount=type=bind,source=./docker/scripts/build_opencv.sh,target=/home/${USER}/scripts/build_opencv.sh \
     bash /home/${USER}/scripts/build_opencv.sh ${OPENCV_VERSION}
-
 
 # BUILD PRE-DEV
 FROM base AS pre-dev
 COPY --from=build-opencv /OpenCV/install /usr/local
+USER root
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/opencv.conf && ldconfig
 
 
@@ -70,14 +102,12 @@ RUN --mount=type=bind,source=./docker/scripts/build_ros_deps.sh,target=/root/scr
     ${PX4_ROS2_INTERFACE_LIB_VERSION} \
     ${PX4_ROS_COM_VERSION}
 
-
 # BUILD PX4
 FROM pre-dev AS build-px4
 
 ARG PX4_VERSION=v1.16.0
 RUN --mount=type=bind,source=./docker/scripts/build_px4.sh,target=/home/${USER}/scripts/build_px4.sh \
     bash /home/${USER}/scripts/build_px4.sh ${PX4_VERSION}
-
 
 # BUILD DEV
 FROM pre-dev AS dev
