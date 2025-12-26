@@ -60,6 +60,8 @@ To start and enter the docker container
 
 ## Launch simulation
 
+### A. Object detection
+
 Once inside to launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with YOLO v8 object detection in custom world :
 
 ```bash
@@ -68,7 +70,7 @@ cd /launch_files
 ```
 Caution: This currently runs the detection node in CPU not in GPU. This can saturate the processor.
 
-Demonstration Video : 
+#### Demonstration Video : 
 
 Click on the thumbnail below to watch the SITL simulation video.
 
