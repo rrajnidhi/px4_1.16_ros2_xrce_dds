@@ -67,6 +67,9 @@ cd /launch_files
 ./single_x500_object_detection.sh
 ```
 Caution: This currently runs the detection node in CPU not in GPU. This can saturate the processor.
+
+Demonstration Video : 
+[![Watch the video](https://youtu.be/d1SfdvVCJaI?si=OS2hcUSJY3GlXnJ4)
 ---
 
 ### List PX4 topics
