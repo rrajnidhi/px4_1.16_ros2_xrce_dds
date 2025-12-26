@@ -73,7 +73,7 @@ Demonstration Video :
 Click on the thumbnail below to watch the SITL simulation video.
 
 
-[![Watch the video](https://youtu.be/d1SfdvVCJaI?si=OS2hcUSJY3GlXnJ4)
+[![Watch the video](https://img.youtube.com/vi/d1SfdvVCJaI/0.jpg)](https://youtu.be/d1SfdvVCJaI)
 
 ---
 
