@@ -53,7 +53,10 @@ RUN apt-get update && apt-get install -y \
 RUN python3 -m pip install --no-cache-dir "numpy<2"
 
 # Install PyTorch compatible with numpy<2
-RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+# RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN python3 -m pip install --no-cache-dir torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu121
+
 
 # Install YOLOv8 WITHOUT upgrading NumPy
 RUN python3 -m pip install --no-cache-dir --no-deps ultralytics

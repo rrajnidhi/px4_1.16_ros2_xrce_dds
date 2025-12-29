@@ -51,7 +51,8 @@ tmux send-keys -t $dds_pane "sleep 5; MicroXRCEAgent udp4 -p $PX4_UXRCE_DDS_PORT
 # ----------------------------
 
 detection_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
-tmux send-keys -t $detection_pane "sleep 8; ros2 run camera_subscriber camera_subscriber_node " C-m
+tmux send-keys -t $detection_pane "sleep 8; CUDA_VISIBLE_DEVICES=0 ros2 run camera_subscriber camera_subscriber_node" C-m
+
 
 # ----------------------------
 # Equalize all panes in the first window

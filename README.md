@@ -5,9 +5,9 @@ Environment for running UAV simulations with **PX4 1.16.0**, **ROS2**, **Gazebo*
 
 ## Features
 
-- Fully containerized PX4 SITL environment for Ubuntu 22.04
-- RGB and Depth sensor enabled for multirotor
-- X500 with YOLO v8 object detection
+- Fully containerized PX4 SITL environment for Ubuntu 22.04.
+- RGB and Depth sensor enabled for multirotor X500.
+- GPU based YOLO v8 object detection.
 
 
 ## Directory Structure

@@ -1,11 +1,31 @@
 #!/usr/bin/env python3
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from cv_bridge import CvBridge
 import cv2
+
+import torch
 from ultralytics import YOLO
+
+
+def select_device(logger=None):
+    """
+    Select CUDA device if available, otherwise CPU.
+    """
+    if torch.cuda.is_available():
+        device_count = torch.cuda.device_count()
+        if logger:
+            logger.info(f"CUDA detected: {device_count} GPU(s) available")
+            for i in range(device_count):
+                logger.info(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+        return torch.device("cuda:0")
+    else:
+        if logger:
+            logger.warn("CUDA not available, falling back to CPU")
+        return torch.device("cpu")
 
 
 class YoloCameraSubscriber(Node):
@@ -27,28 +47,50 @@ class YoloCameraSubscriber(Node):
             camera_qos
         )
 
-        # Publisher: detected video output
+        # Publisher (annotated output)
         self.detected_pub = self.create_publisher(
             Image,
             'detected_video_out',
             10
         )
 
-        # CV bridge
+        # CV Bridge
         self.bridge = CvBridge()
+
+        # Device selection
+        self.device = select_device(self.get_logger())
 
         # Load YOLOv8 model
         self.model = YOLO('/home/ubuntu/.cache/ultralytics/yolov8m.pt')
 
-        self.get_logger().info('YOLOv8 camera subscriber started')
+        # Move model to device
+        self.model.to(self.device)
+
+        # Optional performance optimizations
+        self.model.fuse()          # fuse Conv + BN
+        self.model.conf = 0.4      # confidence threshold
+        self.model.iou = 0.5       # IoU threshold
+
+        self.get_logger().info(
+            f'YOLOv8 loaded on device: {self.device}'
+        )
 
     def callback(self, msg: Image):
         try:
-            # Convert ROS Image → OpenCV
-            frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            # ROS Image → OpenCV
+            frame = self.bridge.imgmsg_to_cv2(
+                msg,
+                desired_encoding='bgr8'
+            )
 
-            # Run YOLOv8 inference
-            results = self.model(frame, verbose=False)
+            # YOLO inference
+            results = self.model(
+                frame,
+                device=self.device,
+                imgsz=640,
+                half=(self.device.type == 'cuda'),
+                verbose=False
+            )
 
             # Draw detections
             annotated_frame = results[0].plot()
@@ -62,22 +104,24 @@ class YoloCameraSubscriber(Node):
                     f'Detected {class_name} with confidence {conf:.2f}'
                 )
 
-            # Convert annotated frame → ROS Image
+            # OpenCV → ROS Image
             detected_msg = self.bridge.cv2_to_imgmsg(
                 annotated_frame,
                 encoding='bgr8'
             )
             detected_msg.header = msg.header
 
-            # Publish detected output
+            # Publish
             self.detected_pub.publish(detected_msg)
 
         except Exception as e:
             self.get_logger().error(f'YOLO callback error: {e}')
 
+
 def main(args=None):
     rclpy.init(args=args)
     node = YoloCameraSubscriber()
+
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
@@ -86,5 +130,7 @@ def main(args=None):
         node.destroy_node()
         rclpy.shutdown()
 
+
 if __name__ == '__main__':
     main()
+
