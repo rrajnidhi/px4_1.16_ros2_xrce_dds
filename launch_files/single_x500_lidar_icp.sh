@@ -30,8 +30,8 @@ tmux send-keys -t $SESSION_NAME:0.1 "bash -c ' PX4_GZ_STANDALONE=1 PX4_SYS_AUTOS
 # ----------------------------
 gz_ros_lidar_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
 tmux send-keys -t $gz_ros_lidar_pane "ros2 run ros_gz_bridge parameter_bridge \
-/world/default/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan \
-/world/default/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked " C-m
+/world/$GZ_WORLD/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan \
+/world/$GZ_WORLD/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked" C-m
 
 # ----------------------------
 # Pane 3: Micro XRCE-DDS Agent
@@ -54,7 +54,7 @@ tmux select-layout -t $SESSION_NAME:0 tiled
 
 # ROS2 tools window
 tmux new-window -t $SESSION_NAME -n "ros2_tools"
-tmux send-keys -t $SESSION_NAME:1 " bash -c ' sleep 8; rviz2 ' " C-m
+tmux send-keys -t $SESSION_NAME:1 " bash -c ' sleep 8; rviz2 -d /home/ubuntu/rviz_config/rviz_2d_lidar.rviz' " C-m
 
 # Focus and attach
 tmux select-window -t $SESSION_NAME:0
