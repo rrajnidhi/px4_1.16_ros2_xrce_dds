@@ -60,7 +60,7 @@ To start and enter the docker container
 
 ## Launch simulation
 
-### A. Object detection
+### A. Object detection on x500_depth Quadcopter
 
 Once inside to launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with YOLO v8 object detection in custom world :
 
@@ -68,7 +68,7 @@ Once inside to launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with YOLO v8 objec
 cd /launch_files
 ./single_x500_object_detection.sh
 ```
-Caution: This currently runs the detection node in CPU not in GPU. This can saturate the processor.
+Caution: This currently detects NVIDIA GPU and runs on it if availbale. Fallback is CPU, but this can saturate the processor.
 
 #### Demonstration Video : 
 
@@ -76,6 +76,22 @@ Click on the thumbnail below to watch the SITL simulation video.
 
 
 [![Watch the video](https://img.youtube.com/vi/d1SfdvVCJaI/0.jpg)](https://youtu.be/d1SfdvVCJaI)
+
+---
+
+### A. Lidar 2D Scan on x500_lidar
+    To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with lidar scan 2D in custom world
+
+```bash
+cd /launch_files
+./single_x500_lidar_icp.sh
+```
+Note: To visualise use pre-installed rviz2. In Rviz Displays -> Global Options -> Fixed Frame , enter "x500_lidar_2d_0/link/lidar_2d_v2". And in topic section "/world/default/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan". 
+
+#### Demonstration Video : 
+
+TBA
+
 
 ---
 
