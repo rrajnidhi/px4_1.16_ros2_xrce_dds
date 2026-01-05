@@ -4,11 +4,11 @@ SESSION_NAME="tmuxinator_session"
 
 # CONFIGURATION (CHANGE MODEL HERE)
 PX4_SYS_AUTOSTART=4013  #x500_lidar_2d
-GZ_WORLD="default" #  use custom_indoor_lab
+GZ_WORLD="custom_indoor_lab" #  use custom_indoor_lab, default, walls
 PX4_UXRCE_DDS_PORT=8888
 
 # PX4 LOCAL STARTING LOCATION Local ENU coordinates (meters, radians)
-PX4_START_X=100.0     # East
+PX4_START_X=8.0     # East
 PX4_START_Y=0.0     # North
 PX4_START_Z=0.3     # Up (spawn slightly above ground)
 PX4_START_ROLL=0.0
