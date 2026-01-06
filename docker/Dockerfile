@@ -129,7 +129,7 @@ COPY --chown=${USER}:${USER} ./resources/gz_models/. /home/${USER}/PX4-gazebo-mo
 COPY --chown=${USER}:${USER} ./resources/gz_worlds/. /home/${USER}/PX4-gazebo-models/worlds
 
 # Copy the rviz config for lidar from local
-COPY --chown=${USER}:${USER} ./resources/rviz/config/.  /home/${USER}/rviz_config
+COPY --chown=${USER}:${USER} ./resources/rviz/.  /home/${USER}/rviz
 
 # Copy the custom SDF into a temporary location
 COPY --chown=${USER}:${USER} ./resources/patches/custom_model_x500_depth.sdf /tmp/custom_model_x500_depth.sdf
