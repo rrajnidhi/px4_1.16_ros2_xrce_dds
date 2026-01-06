@@ -46,7 +46,7 @@
 
   <joint name="lidar_joint" type="fixed">
     <parent link="base_link"/>
-    <child link="x500_lidar_2d_0/link/lidar_2d_v2"/>                        <!--        <child link="lidar_link"/>  -->
+    <child link="lidar_link"/>
     <!-- LiDAR mounted slightly forward and up -->
     <origin xyz="0.2 0 0.1" rpy="0 0 0"/>
   </joint>
