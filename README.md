@@ -8,6 +8,7 @@ Environment for running UAV simulations with **PX4 1.16.0**, **ROS2**, **Gazebo*
 - Fully containerized PX4 SITL environment for Ubuntu 22.04.
 - RGB and Depth sensor enabled for multirotor X500.
 - GPU based YOLO v8 object detection.
+- 2D lidar scanning.
 
 
 ## Directory Structure
@@ -79,7 +80,7 @@ Click on the thumbnail below to watch the SITL simulation video.
 
 ---
 
-### A. Lidar 2D Scan on x500_lidar
+### B. Lidar 2D Scan on x500_lidar
     To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with lidar scan 2D in custom world
 
 ```bash
@@ -97,7 +98,16 @@ Note: How visualise use pre-installed rviz2.
 
 #### Demonstration Video : 
 
-TBA
+Click on the thumbnail below to watch the SITL simulation video of 2D lidar activated on x500_2d_lidar multirotor UAV.
+
+[![Watch the video](https://img.youtube.com/vi/PN5amXc8q8o/0.jpg)](https://youtu.be/PN5amXc8q8o)
+
+---
+
+### C. VTOL landing using camera
+    To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with a standard VTOL with downward looking camera.
+
+    TBA
 
 
 ---
