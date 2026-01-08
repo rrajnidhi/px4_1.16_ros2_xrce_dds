@@ -73,7 +73,15 @@ Caution: This currently detects NVIDIA GPU and runs on it if availbale. Fallback
 
 #### Demonstration Video : 
 
-Click on the thumbnail below to watch the SITL simulation video.
+A sample clip from the test run:
+
+<video width="320" height="240" autoplay loop muted>
+  <source src="assets/yoloV8_obj_det_px4_gazebo_gpu.mp4" type="video/mp4">
+  <p>Video preview unavailable.</p>
+</video>
+
+
+Click on the thumbnail below to watch detailed SITL simulation video.
 
 
 [![Watch the video](https://img.youtube.com/vi/d1SfdvVCJaI/0.jpg)](https://youtu.be/d1SfdvVCJaI)
@@ -81,12 +89,16 @@ Click on the thumbnail below to watch the SITL simulation video.
 ---
 
 ### B. Lidar 2D Scan on x500_lidar
-    To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with lidar scan 2D in custom world
+    
+To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with lidar scan 2D in custom world
 
 ```bash
 cd /launch_files
 ./single_x500_lidar_icp.sh
 ```
+
+Illustration
+
 Note: How visualise use pre-installed rviz2. 
     Either load the existing rviz config file or manually do the following.
     a. In Rviz Displays -> Global Options -> Fixed Frame , enter "x500_lidar_2d_0/link/lidar_2d_v2". And in topic section "/world/default/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan". 
@@ -105,6 +117,8 @@ Click on the thumbnail below to watch the SITL simulation video of 2D lidar acti
 ---
 
 ### C. VTOL landing using camera
+
+
     To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with a standard VTOL with downward looking camera.
 
     TBA
@@ -145,3 +159,4 @@ gz topic -l
 ---
 
 > Enjoy! 
+> If you find this project useful, please consider giving it a ⭐
