@@ -56,14 +56,14 @@ tmux send-keys -t $dds_pane "sleep 5; MicroXRCEAgent udp4 -p $PX4_UXRCE_DDS_PORT
 # ----------------------------
 
 tf2_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
-tmux send-keys -t $tf2_pane "sleep 6; ros2 run tf2_ros static_transform_publisher 0.2 0 0.1 0 0 0 base_link x500_lidar_2d_0/link/lidar_2d_v2" C-m
+tmux send-keys -t $tf2_pane "sleep 6; ros2 run tf2_ros static_transform_publisher 0.2 0.0 0.1 1.5708 0 0 base_link x500_lidar_2d_0/link/lidar_2d_v2" C-m
 
 # ----------------------------
 # Pane 5: TF2 convertion for visualization of UAV (map → base_link(UAV))
 # ----------------------------
 
 px4_tf_pane=$(tmux split-window -v -t $SESSION_NAME:0.0 -P -F "#{pane_id}")
-tmux send-keys -t $px4_tf_pane "sleep 7; ros2 run px4_tf_bridge px4_tf_bridge" C-m
+tmux send-keys -t $px4_tf_pane "sleep 7; ros2 run px4_tf_bridge px4_tf_bridge --ros-args -p use_sim_time:=true" C-m
 
 # ----------------------------
 # Equalize all panes in the first window
@@ -75,7 +75,7 @@ tmux select-layout -t $SESSION_NAME:0 tiled
 # ----------------------------
 # pane 0 : Load rviz config
 # ----------------------------
-tmux new-window -t $SESSION_NAME -n "ros2_tools"
+tmux new-window -t $SESSION_NAME -n "rviz_window"
 tmux send-keys -t $SESSION_NAME:1 " bash -c ' sleep 7.5; rviz2 -d /home/ubuntu/rviz/2d_lidar_project/config/rviz_2d_lidar.rviz' " C-m
 
 # ----------------------------
@@ -83,17 +83,37 @@ tmux send-keys -t $SESSION_NAME:1 " bash -c ' sleep 7.5; rviz2 -d /home/ubuntu/r
 # ----------------------------
 
 tmux split-window -h -t $SESSION_NAME:1.0
-tmux send-keys -t $SESSION_NAME:1.1 "bash -c 'sleep 8; ros2 run robot_state_publisher robot_state_publisher /home/ubuntu/rviz/2d_lidar_project/uav_model/x500.urdf.xacro '" C-m
+tmux send-keys -t $SESSION_NAME:1.1 "bash -c 'sleep 8; ros2 run robot_state_publisher robot_state_publisher /home/ubuntu/rviz/2d_lidar_project/uav_model/x500.urdf.xacro --ros-args -p use_sim_time:=true '" C-m
 
 # ----------------------------
 # Equalize all panes in the second window
 # ----------------------------
 tmux select-layout -t $SESSION_NAME:1 tiled
 
+#SLAM pane : window 3
+
+# ----------------------------
+# pane 0 : SLAM pane
+# ----------------------------
+tmux new-window -t $SESSION_NAME -n "slam_window"
+tmux send-keys -t $SESSION_NAME:2 " bash -c ' sleep 8.5; ros2 run slam_toolbox sync_slam_toolbox_node --ros-args --params-file /home/ubuntu/ros2_ws/src/slam_toolbox.yaml -p use_sim_time:=true ' " C-m
+
+# ----------------------------
+# pane 1 : clock bridge pane
+# ----------------------------
+
+tmux split-window -h -t $SESSION_NAME:2.0
+tmux send-keys -t $SESSION_NAME:2.1 "bash -c 'ros2 run ros_gz_bridge parameter_bridge /clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock  '" C-m
+
+# ----------------------------
+# Equalize all panes in the second window
+# ----------------------------
+tmux select-layout -t $SESSION_NAME:2 tiled
+
 
 # Another window
 tmux new-window -t $SESSION_NAME -n "test_window_1"
-tmux send-keys -t $SESSION_NAME:1 " bash -c ' sleep 2; ' " C-m
+tmux send-keys -t $SESSION_NAME:3 "bash -c ' sleep 2; ' " C-m
 
 # Focus and attach
 tmux select-window -t $SESSION_NAME:0
