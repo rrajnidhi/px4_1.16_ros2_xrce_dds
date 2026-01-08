@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -y \
     ros-humble-rviz2 \
     ros-humble-rqt-image-view \
     ros-humble-cv-bridge \
+    ros-humble-slam-toolbox \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pip
