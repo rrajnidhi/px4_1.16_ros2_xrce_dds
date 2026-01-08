@@ -73,12 +73,9 @@ Caution: This currently detects NVIDIA GPU and runs on it if availbale. Fallback
 
 #### Demonstration Video : 
 
-A sample clip from the test run:
+A short sample clip from the test run (GPU-accelerated):
 
-<video width="320" height="240" autoplay loop muted>
-  <source src="assets/yoloV8_obj_det_px4_gazebo_gpu.mp4" type="video/mp4">
-  <p>Video preview unavailable.</p>
-</video>
+![Demo](assets/yoloV8_obj_det_px4_gazebo_gpu.gif)
 
 
 Click on the thumbnail below to watch detailed SITL simulation video.
@@ -119,7 +116,7 @@ Click on the thumbnail below to watch the SITL simulation video of 2D lidar acti
 ### C. VTOL landing using camera
 
 
-    To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with a standard VTOL with downward looking camera.
+To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with a standard VTOL with downward looking camera.
 
     TBA
 
