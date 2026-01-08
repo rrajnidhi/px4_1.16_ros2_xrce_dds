@@ -79,11 +79,11 @@ cd /launch_files
 ```
 Caution: This currently detects NVIDIA GPU and runs on it if availbale. Fallback is CPU, but this can saturate the processor.
 
-#### Demonstration Video : 
+#### Demonstration Videos : 
 
-### Demonstration
+Here are the links to GPU-Accelerated tests.
 
-| GPU-Accelerated Sample | Full SITL Simulation |
+| Sample video | Full simulation |
 |-----------------------|---------------------|
 | ![Demo](assets/yoloV8_obj_det_px4_gazebo_gpu.gif) | [![Watch the video](https://img.youtube.com/vi/d1SfdvVCJaI/0.jpg)](https://youtu.be/d1SfdvVCJaI) |
 ---
@@ -110,9 +110,11 @@ Note: How visualise use pre-installed rviz2.
 
 #### Demonstration Video : 
 
-Click on the thumbnail below to watch the SITL simulation video of 2D lidar activated on x500_2d_lidar multirotor UAV.
+Here are the links to watch the SITL simulation video of 2D lidar activated on x500_2d_lidar multirotor UAV.
 
-[![Watch the video](https://img.youtube.com/vi/PN5amXc8q8o/0.jpg)](https://youtu.be/PN5amXc8q8o)
+| Sample video | Full simulation |
+|-----------------------|---------------------|
+| ![Demo](assets/2dlidar_px4_gazebo.gif) | [![Watch the video](https://img.youtube.com/vi/PN5amXc8q8o/0.jpg)](https://youtu.be/PN5amXc8q8o) |
 
 ---
 
