@@ -99,13 +99,12 @@ cd /launch_files
 
 Illustration
 
-Note: How visualise use pre-installed rviz2. 
-    Either load the existing rviz config file or manually do the following.
+Note: How to visualise ?
+    The tmux script loads a tested rviz config file. Be mindful while changing the rviz settings there. Description is as follows. 
     a. In Rviz Displays -> Global Options -> Fixed Frame , enter "x500_lidar_2d_0/link/lidar_2d_v2". And in topic section "/world/default/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan". 
-    b. Apply frame.
-        To find the frame : ros2 topic echo /world/walls/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan --once 
-        and  look for header: frame_id: "xxxxx"
-        Use that exact frame_id as the Fixed Frame in RViz.
+    b. Apply frame. To find the frame : ros2 topic echo /world/walls/model/x500_lidar_2d_0/link/link/sensor/lidar_2d_v2/scan --once 
+        and  look for header: frame_id: "xxxxx". Use that exact frame_id as the Fixed Frame in RViz. This will display everything from lidar frame.
+        To set global map view, set map as Fixed Frame.
 
 
 #### Demonstration Video : 
