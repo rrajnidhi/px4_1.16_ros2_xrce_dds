@@ -23,8 +23,9 @@ PX4_1.16_ROS2_XRCE_DDS/
     └── scripts
         └── ..
 └── launch_files/
-    └── single_x500_depth_camera.sh
-    └── single_vtol_camera.sh
+    └── single_x500_object_detection.sh
+    └── single_vtol.sh
+    └── single_x500_lidar_icp.sh
 └── resources/
     └── gz_models/
     └── gz_worlds/
@@ -32,6 +33,13 @@ PX4_1.16_ROS2_XRCE_DDS/
     └── ros_packages/
         └── camera_subscriber/
             └── ..
+        └── px4_tf_bridge/
+            └── ..
+        └── slam_toolbox.yaml
+    └── rviz
+        └── ..
+└── assets
+    └── ..
 └── README.md
 
 ```
@@ -73,16 +81,11 @@ Caution: This currently detects NVIDIA GPU and runs on it if availbale. Fallback
 
 #### Demonstration Video : 
 
-A short sample clip from the test run (GPU-accelerated):
+### Demonstration
 
-![Demo](assets/yoloV8_obj_det_px4_gazebo_gpu.gif)
-
-
-Click on the thumbnail below to watch detailed SITL simulation video.
-
-
-[![Watch the video](https://img.youtube.com/vi/d1SfdvVCJaI/0.jpg)](https://youtu.be/d1SfdvVCJaI)
-
+| GPU-Accelerated Sample | Full SITL Simulation |
+|-----------------------|---------------------|
+| ![Demo](assets/yoloV8_obj_det_px4_gazebo_gpu.gif) | [![Watch the video](https://img.youtube.com/vi/d1SfdvVCJaI/0.jpg)](https://youtu.be/d1SfdvVCJaI) |
 ---
 
 ### B. Lidar 2D Scan on x500_lidar
