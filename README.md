@@ -26,6 +26,7 @@ PX4_1.16_ROS2_XRCE_DDS/
     └── single_x500_object_detection.sh
     └── single_vtol.sh
     └── single_x500_lidar_icp.sh
+    └── single_x500_down_offboard.sh
 └── resources/
     └── gz_models/
     └── gz_worlds/
@@ -34,6 +35,8 @@ PX4_1.16_ROS2_XRCE_DDS/
         └── camera_subscriber/
             └── ..
         └── px4_tf_bridge/
+            └── ..
+        └── road_segmentation/
             └── ..
         └── slam_toolbox.yaml
     └── rviz
@@ -120,13 +123,23 @@ Here are the links to watch the SITL simulation video of 2D lidar activated on x
 
 ---
 
-### C. VTOL landing using camera
+### C. Drone following road using image segmentation
+
+To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with a x500_mono_cam_down and navigate the uav offboard following the center of road using image segmentation.
+
+```bash
+cd /launch_files
+./single_x500_down_offboard.sh
+```
+
+---
+
+### D. VTOL landing using camera
 
 
 To launch PX4 SITL + ROS2 Bridge + Micro XRCE-DDS with a standard VTOL with downward looking camera.
 
     TBA
-
 
 ---
 
