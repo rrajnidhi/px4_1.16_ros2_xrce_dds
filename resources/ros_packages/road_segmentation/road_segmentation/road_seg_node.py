@@ -21,7 +21,7 @@ class RoadSegmentationNode(Node):
         self.bridge = CvBridge()
 
         # Subscriber to camera
-        self.subscription = self.create_subscription(Image,'/world/baylands/model/x500_mono_cam_down_0/link/camera_link/sensor/imager/image',self.image_callback,10)
+        self.subscription = self.create_subscription(Image,'/world/sonoma_raceway/model/x500_mono_cam_down_0/link/camera_link/sensor/imager/image',self.image_callback,10)
 
         # Publisher for segmented output (frame + semi-transparent road overlay)
         self.segmented_publisher = self.create_publisher(Image,'/road_segmentation/segmented_output',10)
@@ -52,7 +52,20 @@ class RoadSegmentationNode(Node):
         h, w, _ = frame.shape
 
         # YOLO inference
-        results = self.model.predict(source=frame,imgsz=640,conf=0.25,device=self.device,verbose=False)
+        results = self.model.predict(
+            source=frame,
+            imgsz=640,
+            conf=0.25,
+            device=self.device,
+            verbose=False,
+            save=False,
+            save_txt=False,
+            save_conf=False,
+            project="/tmp",      # writable directory
+            name="road_seg",     # avoids default "predict"
+            exist_ok=True
+            )
+
 
         # Initialize mask
         road_mask = np.zeros((h, w), dtype=np.uint8)
