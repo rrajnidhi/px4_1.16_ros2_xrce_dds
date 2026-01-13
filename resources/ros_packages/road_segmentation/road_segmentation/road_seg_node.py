@@ -77,7 +77,7 @@ class RoadSegmentationNode(Node):
         results = self.model.predict(
             source=frame,
             imgsz=640,
-            conf=0.25,
+            conf=0.5,
             device=self.device,
             verbose=False,
             save=False,
