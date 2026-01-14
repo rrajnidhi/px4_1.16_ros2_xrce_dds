@@ -1,5 +1,7 @@
 # UAV Simulation with PX4, ROS2 & Micro XRCE-DDS
 
+![Docker CI](https://github.com/rrajnidhi/px4_1.16_ros2_xrce_dds/actions/workflows/docker-image.yml/badge.svg)
+
 Environment for running UAV simulations with **PX4 1.16.0**, **ROS2**, **Gazebo**, and **Micro XRCE-DDS**, including the **PX4-ROS2 bridge**.  
 ---
 
