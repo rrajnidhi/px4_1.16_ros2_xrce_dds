@@ -11,19 +11,28 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      # 1️⃣ Checkout repository
       - uses: actions/checkout@v4
 
-      # 2️⃣ Set up Docker Buildx (optional, faster builds)
+      - name: Free disk space
+        run: |
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          sudo apt-get clean
+          df -h
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # 3️⃣ Build Docker image
+      - name: Docker cleanup
+        run: docker system prune -af
+
       - name: Build Docker image
         run: |
           docker build \
             -f docker/Dockerfile \
             . \
             --tag px4_1.16_ros2_xrce_dds_image:ci \
-            --progress=plain \
             --pull
+
