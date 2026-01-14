@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Docker Image CI/CD
 
 on:
   push:
@@ -7,12 +7,38 @@ on:
     branches: [ "main" ]
 
 jobs:
-
-  build:
-
+  build-and-push:
     runs-on: ubuntu-22.04
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build -f docker/Dockerfile . --tag px4_1.16_ros2_xrce_dds_image:$(date +%s)
+      # 1️⃣ Checkout repo
+      - uses: actions/checkout@v4
+
+      # 2️⃣ Set up Docker Buildx (faster builds, caching, optional multi-platform)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # 3️⃣ Build Docker image (fixed CI tag)
+      - name: Build Docker image
+        run: |
+          docker build \
+            -f docker/Dockerfile \
+            . \
+            --tag px4_1.16_ros2_xrce_dds_image:ci \
+            --progress=plain \
+            --pull
+
+      # 4️⃣ Optional: Log in to Docker Hub if secrets are set
+      - name: Log in to Docker Hub
+        if: secrets.DOCKER_HUB_USERNAME && secrets.DOCKER_HUB_ACCESS_TOKEN
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # 5️⃣ Optional: Push Docker image to Docker Hub (only on push to main)
+      - name: Push Docker image
+        if: github.event_name == 'push' && secrets.DOCKER_HUB_USERNAME && secrets.DOCKER_HUB_ACCESS_TOKEN
+        run: |
+          docker tag px4_1.16_ros2_xrce_dds_image:ci ${{ secrets.DOCKER_HUB_USERNAME }}/px4_1.16_ros2_xrce_dds_image:ci
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/px4_1.16_ros2_xrce_dds_image:ci
