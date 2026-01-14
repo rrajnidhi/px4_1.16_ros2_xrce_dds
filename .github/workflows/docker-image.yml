@@ -15,4 +15,4 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag px4_1.16_ros2_xrce_dds_image:$(date +%s)
+      run: docker build -f docker/Dockerfile ./docker --tag px4_1.16_ros2_xrce_dds_image:$(date +%s)
