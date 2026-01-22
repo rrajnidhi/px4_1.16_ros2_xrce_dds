@@ -1,5 +1,6 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -14,7 +15,7 @@ from ament_index_python.packages import get_package_share_directory
 from ultralytics import YOLO
 
 # PX4 messages
-from px4_msgs.msg import OffboardControlMode, TrajectorySetpoint
+from px4_msgs.msg import OffboardControlMode, VehicleAttitudeSetpoint, VehicleAttitude
 
 
 class RoadSegmentationNode(Node):
@@ -37,46 +38,53 @@ class RoadSegmentationNode(Node):
             10
         )
 
-        # ── PX4 Offboard publishers (v1.16 compatible) ──
+        # PX4 publishers
         self.offboard_control_mode_pub = self.create_publisher(
             OffboardControlMode, '/fmu/in/offboard_control_mode', 10
         )
-        self.trajectory_setpoint_pub = self.create_publisher(
-            TrajectorySetpoint, '/fmu/in/trajectory_setpoint', 10
+        self.attitude_setpoint_pub = self.create_publisher(
+            VehicleAttitudeSetpoint, '/fmu/in/vehicle_attitude_setpoint', 10
         )
 
-        # Control tuning (start very small!)
-        self.k_yaw_rate       = 0.10       # now used as k_lateral_vel → m/s per pixel error
-        self.k_forward_vel    = 0.006       # m/s per pixel (forward bias)
-        self.max_yaw_rate     = 2.5         # now used as max_lateral_vel → m/s cap
-        self.max_forward_vel  = 1.2         # m/s cap
-        self.deadzone_px      = 12.0        # ignore tiny errors
+        # Subscribe to current attitude (for current yaw feedback)
+        qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+        self.attitude_sub = self.create_subscription(
+            VehicleAttitude,
+            '/fmu/out/vehicle_attitude',
+            self.attitude_callback,
+            qos_profile=qos
+        )
+        self.get_logger().info("Subscribed to /fmu/out/vehicle_attitude with BEST_EFFORT QoS")
 
-        # Default cruise speed when road is centered
-        self.base_forward_vel = 2.5         # m/s
+        # Tuning
+        self.k_yaw = 2.0                    # how aggressively to set desired yaw (higher = faster snap)
+        self.yaw_threshold = 0.12           # rad (~7°) — consider aligned
+        self.thrust_forward = 0.75           # normalized forward thrust when aligned
+        self.thrust_align = 0.73            # thrust while rotating (small hover)
 
-        # Timer: send setpoints at ~30 Hz (required!)
-        self.setpoint_timer = self.create_timer(0.033, self.publish_offboard_setpoint)
+        self.setpoint_timer = self.create_timer(0.033, self.publish_attitude_setpoint)
 
-        # State from latest frame
-        self.latest_x_error     = 0.0
-        self.latest_y_error     = 0.0
-        self.have_valid_target  = False
+        # State
+        self.current_yaw = 0.0
+        self.latest_x_error = 0.0
+        self.latest_y_error = 0.0
+        self.have_valid_target = False
 
-        # ── Centerline & visualization settings ──
-        self.row_step            = 12
-        self.min_road_width      = 40
+        # Centerline settings
+        self.row_step = 12
+        self.min_road_width = 40
         self.look_ahead_fraction = 0.4
-        self.centerline_color    = (50, 180, 255)
-        self.target_point_color  = (0, 0, 255)
+        self.centerline_color = (50, 180, 255)
+        self.target_point_color = (0, 0, 255)
 
-        self.get_logger().info('Road segmentation node started')
-        self.get_logger().info(
-            f"Centerline: step={self.row_step}px | min_width={self.min_road_width}px | "
-            f"look_ahead={self.look_ahead_fraction:.2f}"
-        )
+        self.get_logger().info('Road segmentation node started (q_d yaw + thrust)')
+        self.get_logger().info(f"Look-ahead: {self.look_ahead_fraction:.2f} | Yaw gain: {self.k_yaw:.2f}")
 
-        # YOLO setup
+        # YOLO
         pkg_path = get_package_share_directory('road_segmentation')
         model_path = os.path.join(pkg_path, 'models', 'best.pt')
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -87,69 +95,70 @@ class RoadSegmentationNode(Node):
         self.MIN_ROAD_AREA = 5000
         self.ALPHA = 0.5
 
-    def publish_offboard_setpoint(self):
-        """Send continuous offboard heartbeat + velocity command (PX4 v1.16 / Humble)"""
+    def attitude_callback(self, msg):
+        q = msg.q
+        siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
+        cosy_cosp = 1 - 2 * (q[2]**2 + q[3]**2)
+        self.current_yaw = math.atan2(siny_cosp, cosy_cosp)
 
-        now_ns = self.get_clock().now().nanoseconds
-        timestamp_us = int(now_ns / 1000)
+    def yaw_to_quaternion(self, yaw):
+        """Convert yaw (rad) to quaternion [w, x, y, z] with roll=pitch=0"""
+        cy = math.cos(yaw * 0.5)
+        sy = math.sin(yaw * 0.5)
+        return [cy, 0.0, 0.0, sy]
 
-        # 1. Heartbeat: OffboardControlMode
-        mode_msg = OffboardControlMode()
-        mode_msg.timestamp = timestamp_us
-        mode_msg.position = False
-        mode_msg.velocity = True          # body-frame velocity
-        mode_msg.acceleration = False
-        mode_msg.attitude = False
-        mode_msg.body_rate = False
-        mode_msg.thrust_and_torque = False
-        self.offboard_control_mode_pub.publish(mode_msg)
+    def publish_attitude_setpoint(self):
+        timestamp_us = int(self.get_clock().now().nanoseconds / 1000)
 
-        # 2. Setpoint: body-frame velocity + yawspeed
-        sp = TrajectorySetpoint()
+        # Offboard heartbeat
+        mode = OffboardControlMode()
+        mode.timestamp = timestamp_us
+        mode.position = False
+        mode.velocity = False
+        mode.acceleration = False
+        mode.attitude = True
+        mode.body_rate = False
+        mode.thrust_and_torque = True
+        self.offboard_control_mode_pub.publish(mode)
+
+        sp = VehicleAttitudeSetpoint()
         sp.timestamp = timestamp_us
 
-        # Body-frame velocity (FLU: x=forward, y=right/left, z=up/down)
-        forward_vel = self.base_forward_vel
-        lateral_vel = 0.0   # body y-velocity for lateral correction
-
         if self.have_valid_target:
-            # Lateral correction: strafe/sideslip to center the road
-        
-            lateral_vel = -self.latest_x_error * self.k_yaw_rate
-            lateral_vel = np.clip(lateral_vel, -self.max_yaw_rate, self.max_yaw_rate)         
+            # LOS yaw: angle from image center to target
+            # y_error positive = down = forward, x_error positive = right
+            los_yaw = math.atan2(self.latest_x_error, self.latest_y_error)
+            print(math.degrees(los_yaw))
+            # Desired yaw = LOS direction
+            desired_yaw = los_yaw
 
-            # Forward speed bias
-            forward_vel += self.latest_y_error * self.k_forward_vel
-            forward_vel = np.clip(forward_vel, 0.2, self.max_forward_vel)
+            # Optional: smooth transition (blend with current yaw)
+            # desired_yaw = self.current_yaw + self.k_yaw * (los_yaw - self.current_yaw)
 
-        # Apply deadzone on lateral velocity
-        if abs(self.latest_x_error) < self.deadzone_px:
-            lateral_vel = 0.0
+            # Normalize to [-π, π]
+            desired_yaw = (desired_yaw + math.pi) % (2 * math.pi) - math.pi
 
-        #frame convertion
+            # Set desired quaternion (only yaw matters)
+            sp.q_d = self.yaw_to_quaternion(desired_yaw)
 
-        sp.velocity = [lateral_vel, -forward_vel,  0.0]   
+            # Thrust forward only when aligned
+            yaw_error = (desired_yaw - self.current_yaw + math.pi) % (2 * math.pi) - math.pi
+            if abs(yaw_error) < self.yaw_threshold:
+                sp.thrust_body = [self.thrust_forward, 0.0, -0.5]  # forward + hover
+            else:
+                sp.thrust_body = [self.thrust_align, 0.0, -0.5]   # hover while turning
 
-        # Yaw control: set yawspeed to 0 (no yaw rate)
-        sp.yawspeed = 0.0                               # ← correct field name
+            self.get_logger().info(
+                f"Los yaw: {los_yaw:.3f} rad | Curr yaw: {self.current_yaw:.3f} | "
+                f"Yaw err: {yaw_error:.3f} rad | Thrust fwd: {sp.thrust_body[0]:.2f}"
+            )
+        else:
+            sp.q_d = [math.nan, math.nan, math.nan, math.nan]
+            sp.thrust_body = [0.0, 0.0, -0.5]  # safe hover
 
-        # Leave other fields as NaN
-        sp.position = [math.nan, math.nan, math.nan]
-        sp.acceleration = [math.nan, math.nan, math.nan]
-        sp.jerk = [math.nan, math.nan, math.nan]
-        sp.yaw = math.nan
+        self.attitude_setpoint_pub.publish(sp)
 
-        self.trajectory_setpoint_pub.publish(sp)
-
-        # Debug print every few seconds
-        if hasattr(self, '_last_log') and (now_ns - self._last_log) < 3e9:
-            return
-        self._last_log = now_ns
-        self.get_logger().info(
-            f"Offboard cmd → lateral_vel: {lateral_vel:.3f} m/s | fwd_vel: {forward_vel:.2f} m/s"
-        )
-
-        
+    # ── Your existing centerline functions go here (unchanged) ──
     def score_road_component(self, stats, centroid, image_shape):
         h, w = image_shape
         area = stats[cv2.CC_STAT_AREA]
@@ -207,7 +216,6 @@ class RoadSegmentationNode(Node):
         frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         h, w, _ = frame.shape
 
-        # YOLO + best mask selection (unchanged)
         results = self.model.predict(
             source=frame,
             imgsz=640,
@@ -254,7 +262,6 @@ class RoadSegmentationNode(Node):
 
         road_mask = best_road_mask if best_road_mask is not None else np.zeros((h, w), dtype=np.uint8)
 
-        # Green overlay
         overlay_color = np.array([0, 255, 0], dtype=np.uint8)
         colored_overlay = np.zeros_like(frame)
         colored_overlay[road_mask > 0] = overlay_color
@@ -264,23 +271,19 @@ class RoadSegmentationNode(Node):
             frame, 1 - self.ALPHA, 0
         )
 
-        # centerline processing 
         target_point, centerline_points = self.process_centerline(segmented_frame, road_mask)
 
-        # pixel error is calculated for control
         x_error, y_error = self.calculate_pixel_errors(target_point, h, w)
 
         if x_error is not None:
             self.latest_x_error = x_error
             self.latest_y_error = y_error
             self.have_valid_target = True
-            #self.get_logger().info(f"Pixel errors → x: {x_error:+.1f} px (right positive), "f"y: {y_error:+.1f} px (forward/lower positive)")
         else:
             self.have_valid_target = False
             self.latest_x_error = 0.0
             self.latest_y_error = 0.0
 
-        # Publish result
         segmented_msg = self.bridge.cv2_to_imgmsg(segmented_frame, encoding='bgr8')
         segmented_msg.header = msg.header
         self.segmented_publisher.publish(segmented_msg)
