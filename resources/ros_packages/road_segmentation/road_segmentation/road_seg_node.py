@@ -176,14 +176,14 @@ class RoadSegmentationNode(Node):
                 desired_yaw = self.current_yaw + (self.k_yaw * error)
 
                 # Rate limit big changes (prevents violent turns)
-                max_delta_yaw = 0.30         # rad per cycle (~17° per 33 ms)
-                delta = np.clip(desired_yaw - self.current_yaw, -max_delta_yaw, max_delta_yaw)
-                sp.yaw = self.current_yaw + delta
-                sp.yawspeed = float('nan')
+                #max_delta_yaw = 0.30         # rad per cycle (~17° per 33 ms)
+                #delta = np.clip(desired_yaw - self.current_yaw, -max_delta_yaw, max_delta_yaw)
+                #sp.yaw = self.current_yaw + delta
+                #sp.yawspeed = float('nan')
 
                 # Option B: yaw rate mode (more direct, often better with vision)
-                # sp.yaw = float('nan')
-                # sp.yawspeed = np.clip(3.0 * error, -1.8, 1.8)   # max ±~100 deg/s
+                sp.yaw = float('nan')
+                sp.yawspeed = np.clip(1.0 * error, -1.0, 1.0)   # max ±~100 deg/s
 
             else:
                 # No target → slow down and hold heading
