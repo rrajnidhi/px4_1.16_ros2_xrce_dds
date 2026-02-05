@@ -67,24 +67,13 @@ class RoadSegmentationNode(Node):
             qos_profile=qos
         )
 
-        self.local_pos_sub = self.create_subscription(
-            VehicleLocalPosition,
-            '/fmu/out/vehicle_local_position',
-            self.local_pos_callback,
-            qos_profile=qos
-        )
-
-
-        self.current_z = 0.0
-        self.desired_z = 0.0           # Set when first entering OFFBOARD
-        self.kp_z = 1.2                # P gain for altitude hold (tune 0.8–2.0)
-        self.hover_thrust = -1.0      # Base hover thrust (negative Z) — tune this
-
         # Control tuning
         self.k_yaw = 2.0                    # how aggressively to set desired yaw
         self.yaw_threshold = 0.12           # rad (~7°) — consider aligned
-        self.thrust_forward = 0.75          # normalized forward thrust when aligned
-        self.thrust_align = 0.73            # thrust while rotating
+
+        # ─── NEW ─── Angle filtering
+        self.alpha_filter = 0.7             # 0.6 ~ 0.85 recommended
+        self.filtered_angle = 0.0
 
         self.setpoint_timer = self.create_timer(0.033, self.publish_trajectory_setpoint)
 
@@ -93,7 +82,7 @@ class RoadSegmentationNode(Node):
         self.latest_x_error = 0.0
         self.latest_y_error = 0.0
         self.have_valid_target = False
-        self.offboard_active = False       # NEW: track when we enter OFFBOARD
+        self.offboard_active = False
 
         # Centerline settings
         self.row_step = 12
@@ -102,8 +91,8 @@ class RoadSegmentationNode(Node):
         self.centerline_color = (50, 180, 255)
         self.target_point_color = (0, 0, 255)
 
-        self.get_logger().info('Road segmentation node started (q_d yaw + thrust + altitude hold)')
-        self.get_logger().info(f"Look-ahead: {self.look_ahead_fraction:.2f} | Yaw gain: {self.k_yaw:.2f}")
+        self.get_logger().info('Road segmentation node started')
+        self.get_logger().info(f"Look-ahead: {self.look_ahead_fraction:.2f} | Yaw gain: {self.k_yaw:.2f} | Angle filter: {self.alpha_filter}")
 
         # YOLO
         pkg_path = get_package_share_directory('road_segmentation')
@@ -119,6 +108,10 @@ class RoadSegmentationNode(Node):
         self.current_state = ""
 
         self.latest_look_angle = 0.0
+        self.dy = 0.0
+        self.prev_angle = 0.0
+        self.control_dt = 0.033   # same as timer period
+
 
     def status_callback(self, msg):
         if msg.nav_state == 14:
@@ -131,9 +124,6 @@ class RoadSegmentationNode(Node):
         siny_cosp = 2 * (q[0] * q[3] + q[1] * q[2])
         cosy_cosp = 1 - 2 * (q[2]**2 + q[3]**2)
         self.current_yaw = math.atan2(siny_cosp, cosy_cosp)
-
-    def local_pos_callback(self, msg):
-        self.current_z = msg.z  # NED, negative up
 
     def yaw_to_quaternion(self, yaw):
         cy = math.cos(yaw * 0.5)
@@ -165,29 +155,36 @@ class RoadSegmentationNode(Node):
             sp.position = [float('nan')] * 3
 
             if self.have_valid_target:
-                # ── FORWARD SPEED ── always try to move forward
-                forward_speed = 1.0          # m/s – start with 0.8–1.5, tune
-                sp.velocity = [forward_speed, 0.0, 0.0]
+                if self.dy < 0.0:
+                    forward_speed = 2.0
+                else:
+                    forward_speed = -2.0
 
-                # ── YAW CORRECTION ──
-                error = self.latest_look_angle
+                # --- compute filtered angle & rate ---
+                angle = self.latest_look_angle
+                angle_rate = (angle - self.prev_angle) / self.control_dt
+                self.prev_angle = angle
 
-                # Option A: absolute yaw (smoother, recommended first)
-                desired_yaw = self.current_yaw + (self.k_yaw * error)
+                # --- PD control ---
+                k_p = 3.2     # proportional gain
+                k_d = 0.35    # damping gain
+                lat_vel = k_p * angle - k_d * angle_rate
+                lat_vel = np.clip(lat_vel, -2.0, 2.0)
 
-                # Rate limit big changes (prevents violent turns)
-                #max_delta_yaw = 0.30         # rad per cycle (~17° per 33 ms)
-                #delta = np.clip(desired_yaw - self.current_yaw, -max_delta_yaw, max_delta_yaw)
-                #sp.yaw = self.current_yaw + delta
-                #sp.yawspeed = float('nan')
+                # --- convert to NED velocity ---
+                vn = forward_speed * math.cos(self.current_yaw) - lat_vel * math.sin(self.current_yaw)
+                ve = forward_speed * math.sin(self.current_yaw) + lat_vel * math.cos(self.current_yaw)
+                sp.velocity = [vn, ve, 0.0]
 
-                # Option B: yaw rate mode (more direct, often better with vision)
+                # --- leave yaw unchanged ---
                 sp.yaw = float('nan')
-                sp.yawspeed = np.clip(1.0 * error, -1.0, 1.0)   # max ±~100 deg/s
+                sp.yawspeed = float('nan')
+
+
 
             else:
                 # No target → slow down and hold heading
-                sp.velocity = [0.3, 0.0, 0.0]   # crawl forward or [0,0,0]
+                sp.velocity = [0.0, 0.0, 0.0]
                 sp.yaw = self.current_yaw
                 sp.yawspeed = float('nan')
 
@@ -203,27 +200,21 @@ class RoadSegmentationNode(Node):
 
         dx = tx - center_x
         dy = ty - center_y
+        self.dy = dy
 
         print(f"Target: {target_point}, Center: ({center_x:.1f}, {center_y:.1f}), dx:{dx:6.1f}, dy:{dy:6.1f} → ", end="")
-
-        # ───────────────────────────────────────────────────────────────
-        # NO rejection based on dy anymore
-        # We always compute the angle — even if target is directly below or very close
-        # ───────────────────────────────────────────────────────────────
 
         raw_angle = math.atan2(dx, dy)
 
         # Important: choose the correct sign for your setup
-        angle_rad = raw_angle          # try this first
-        # angle_rad = -raw_angle       # flip if turning direction is wrong
+        angle_rad = raw_angle          # ← try this first
+        # angle_rad = -raw_angle       # ← flip if turning direction is wrong
 
-        # Small deadband to prevent jitter when almost perfectly aligned
         if abs(angle_rad) < 0.04:      # ≈ 2.3°
             angle_rad = 0.0
 
         print(f"angle: {angle_rad:+.3f} rad")
         return angle_rad, True
-
 
     def score_road_component(self, stats, centroid, image_shape):
         h, w = image_shape
@@ -257,7 +248,6 @@ class RoadSegmentationNode(Node):
         if target_point is not None:
             cv2.circle(frame, target_point, 12, self.target_point_color, -1)
             cv2.circle(frame, target_point, 4, (255, 255, 255), -1)
-        #center_point of frame
         cv2.circle(frame, (w // 2, h // 2), 6, (180, 180, 60), 2)
 
     def calculate_pixel_errors(self, target_point: tuple[int, int] | None, frame_height: int, frame_width: int) -> tuple[float | None, float | None]:
@@ -342,25 +332,26 @@ class RoadSegmentationNode(Node):
 
         x_error, y_error = self.calculate_pixel_errors(target_point, h, w)
 
-        # calculate for yaw control
-        look_angle, valid = self.calculate_look_angle(target_point, w, h)
-        #print(target_point, w, h, look_angle, valid)
+        # calculate angle
+        raw_look_angle, angle_valid = self.calculate_look_angle(target_point, w, h)
 
-        if valid:
-            self.latest_look_angle = look_angle
-            self.have_valid_target = True
+        # Apply filter
+        if angle_valid:
+            self.filtered_angle = self.alpha_filter * raw_look_angle + (1 - self.alpha_filter) * self.filtered_angle
+            self.latest_look_angle = self.filtered_angle
         else:
             self.latest_look_angle = 0.0
-            self.have_valid_target = False
 
+        # Update errors (still keeping them updated — might be useful later)
         if x_error is not None:
             self.latest_x_error = x_error
             self.latest_y_error = y_error
-            self.have_valid_target = True
         else:
-            self.have_valid_target = False
             self.latest_x_error = 0.0
             self.latest_y_error = 0.0
+
+        # ─── NEW ─── Final & clean decision about valid target
+        self.have_valid_target = angle_valid and (target_point is not None)
 
         segmented_msg = self.bridge.cv2_to_imgmsg(segmented_frame, encoding='bgr8')
         segmented_msg.header = msg.header
