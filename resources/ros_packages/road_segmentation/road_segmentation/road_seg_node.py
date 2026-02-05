@@ -92,7 +92,7 @@ class RoadSegmentationNode(Node):
         self.target_point_color = (0, 0, 255)
 
         self.get_logger().info('Road segmentation node started')
-        self.get_logger().info(f"Look-ahead: {self.look_ahead_fraction:.2f} | Yaw gain: {self.k_yaw:.2f} | Angle filter: {self.alpha_filter}")
+        #self.get_logger().info(f"Look-ahead: {self.look_ahead_fraction:.2f} | Yaw gain: {self.k_yaw:.2f} | Angle filter: {self.alpha_filter}")
 
         # YOLO
         pkg_path = get_package_share_directory('road_segmentation')
@@ -110,7 +110,8 @@ class RoadSegmentationNode(Node):
         self.latest_look_angle = 0.0
         self.dy = 0.0
         self.prev_angle = 0.0
-        self.control_dt = 0.033   # same as timer period
+        self.control_dt = 0.033   
+        self.acceptance_limit_degrees = 20
 
 
     def status_callback(self, msg):
@@ -155,32 +156,42 @@ class RoadSegmentationNode(Node):
             sp.position = [float('nan')] * 3
 
             if self.have_valid_target:
-                if self.dy < 0.0:
-                    forward_speed = 2.0
+                # --- check yaw alignment ---
+                yaw_threshold_rad = math.radians(self.acceptance_limit_degrees)
+
+                if abs(self.latest_look_angle) > 3.14 - yaw_threshold_rad:
+                    # --- not aligned: rotate in place ---
+                    #print(yaw_threshold_rad , self.latest_look_angle )
+                    self.get_logger().info('Yaw aligning phase')
+                    sp.velocity = [0.0, 0.0, 0.0]
+                    sp.yaw = float('nan')
+                    # yaw rate proportional to look angle
+                    k_yaw_rate = 0.2
+                    sp.yawspeed = np.clip(k_yaw_rate * self.latest_look_angle, -2.0, 2.0)
+
                 else:
-                    forward_speed = -2.0
+                    # --- aligned: move forward towards target ---
+                    self.get_logger().info('moving forward')
+                    forward_speed = 2.0 if self.dy < 0 else -2.0
 
-                # --- compute filtered angle & rate ---
-                angle = self.latest_look_angle
-                angle_rate = (angle - self.prev_angle) / self.control_dt
-                self.prev_angle = angle
+                    # --- compute lateral PD control ---
+                    angle = self.latest_look_angle
+                    angle_rate = (angle - self.prev_angle) / self.control_dt
+                    self.prev_angle = angle
 
-                # --- PD control ---
-                k_p = 3.2     # proportional gain
-                k_d = 0.35    # damping gain
-                lat_vel = k_p * angle - k_d * angle_rate
-                lat_vel = np.clip(lat_vel, -2.0, 2.0)
+                    k_p = 1.2     # proportional gain
+                    k_d = 0.35    # damping gain
+                    lat_vel = k_p * angle - k_d * angle_rate
+                    lat_vel = np.clip(lat_vel, -2.0, 2.0)
 
-                # --- convert to NED velocity ---
-                vn = forward_speed * math.cos(self.current_yaw) - lat_vel * math.sin(self.current_yaw)
-                ve = forward_speed * math.sin(self.current_yaw) + lat_vel * math.cos(self.current_yaw)
-                sp.velocity = [vn, ve, 0.0]
+                    # --- convert to NED velocities ---
+                    vn = forward_speed * math.cos(self.current_yaw) - lat_vel * math.sin(self.current_yaw)
+                    ve = forward_speed * math.sin(self.current_yaw) + lat_vel * math.cos(self.current_yaw)
+                    sp.velocity = [vn, ve, 0.0]
 
-                # --- leave yaw unchanged ---
-                sp.yaw = float('nan')
-                sp.yawspeed = float('nan')
-
-
+                    # --- keep yaw steady (already aligned) ---
+                    sp.yaw = float('nan')
+                    sp.yawspeed = 0.0
 
             else:
                 # No target → slow down and hold heading
@@ -189,6 +200,7 @@ class RoadSegmentationNode(Node):
                 sp.yawspeed = float('nan')
 
         self.trajectory_setpoint_pub.publish(sp)
+
 
     def calculate_look_angle(self, target_point, frame_width, frame_height):
         if target_point is None:
@@ -201,9 +213,6 @@ class RoadSegmentationNode(Node):
         dx = tx - center_x
         dy = ty - center_y
         self.dy = dy
-
-        print(f"Target: {target_point}, Center: ({center_x:.1f}, {center_y:.1f}), dx:{dx:6.1f}, dy:{dy:6.1f} → ", end="")
-
         raw_angle = math.atan2(dx, dy)
 
         # Important: choose the correct sign for your setup
@@ -212,8 +221,6 @@ class RoadSegmentationNode(Node):
 
         if abs(angle_rad) < 0.04:      # ≈ 2.3°
             angle_rad = 0.0
-
-        print(f"angle: {angle_rad:+.3f} rad")
         return angle_rad, True
 
     def score_road_component(self, stats, centroid, image_shape):
